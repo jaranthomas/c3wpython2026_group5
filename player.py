@@ -29,8 +29,7 @@ class Player:
         self.form = "SOLID"
         self.facing_right = True
 
-        self.lives_icon = pygame.image.load("lives.png").convert_alpha()
-        self.lives_icon = pygame.transform.scale(self.lives_icon, (32, 32))
+
 
     def take_damage(self):
         if not self.invincible:
