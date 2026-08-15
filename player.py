@@ -1,5 +1,6 @@
 import pygame
 
+
 class Player:
     def __init__(self, start_x, start_y):
         # Starting Spawn
@@ -29,7 +30,9 @@ class Player:
         self.form = "SOLID"
         self.facing_right = True
 
-
+        # UI Assets
+        self.lives_icon = pygame.image.load("lives.png").convert_alpha()
+        self.lives_icon = pygame.transform.scale(self.lives_icon, (32, 32))
 
     def take_damage(self):
         if not self.invincible:
@@ -39,7 +42,7 @@ class Player:
             if self.lives <= 0:
                 print("GAME OVER")
                 return True  # Signals full restart to game loop
-            
+
             # Brief invincibility after getting hit
             self.invincible = True
             self.invincible_timer = pygame.time.get_ticks()
@@ -70,3 +73,72 @@ class Player:
 
         for i in range(self.lives):
             screen.blit(self.lives_icon, (start_x + (i * 40), start_y))
+
+    def draw(self, screen):
+        # Default placeholder rectangle (blue) if no sprite is loaded
+        pygame.draw.rect(screen, (0, 120, 255), self.rect)
+        self.draw_lives_ui(screen)
+
+
+class Movement:
+    def __init__(self, speed=5, gravity=0.5, jump_power=-11):
+        self.speed = speed
+        self.gravity = gravity
+        self.jump_power = jump_power
+
+    def handle_input(self, player):
+        keys = pygame.key.get_pressed()
+
+        # Horizontal Movement (A/D or Arrow keys)
+        player.vel_x = 0
+        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+            player.vel_x = -self.speed
+            player.facing_right = False
+        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+            player.vel_x = self.speed
+            player.facing_right = True
+
+        # Jumping (Space, W, or Up Arrow)
+        if (
+            keys[pygame.K_SPACE] or keys[pygame.K_w] or keys[pygame.K_UP]
+        ) and player.is_grounded:
+            player.vel_y = self.jump_power
+            player.is_grounded = False
+
+    def update(self, player, platforms):
+        # 1. Apply Gravity
+        player.vel_y += self.gravity
+
+        # 2. Horizontal Movement & Wall Collisions
+        player.x += player.vel_x
+        player.rect = pygame.Rect(
+            player.x, player.y, player.width, player.height
+        )
+        for platform in platforms:
+            if player.rect.colliderect(platform):
+                if player.vel_x > 0:  # Hit left side of wall
+                    player.x = platform.left - player.width
+                elif player.vel_x < 0:  # Hit right side of wall
+                    player.x = platform.right
+
+        # 3. Vertical Movement & Floor/Ceiling Collisions
+        player.y += player.vel_y
+        player.rect = pygame.Rect(
+            player.x, player.y, player.width, player.height
+        )
+        player.is_grounded = False
+
+        for platform in platforms:
+            if player.rect.colliderect(platform):
+                if player.vel_y > 0:  # Landing on top of platform
+                    player.y = platform.top - player.height
+                    player.vel_y = 0
+                    player.is_grounded = True
+                elif player.vel_y < 0:  # Hitting ceiling
+                    player.y = platform.bottom
+                    player.vel_y = 0
+
+        # Sync final rectangle position
+        player.rect = pygame.Rect(
+            player.x, player.y, player.width, player.height
+        )
